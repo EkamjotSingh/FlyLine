@@ -67,6 +67,15 @@ def get_crowd_adjustment(airport_code: str, hour: int, day_of_week: int, month: 
 def root():
     return {"status": "FlyTime backend running"}
 
+@app.get("/airports")
+def get_airports():
+    return {
+        "airports": [
+            {"code": "ATL", "name": "Atlanta Hartsfield-Jackson"},
+            {"code": "JFK", "name": "New York John F. Kennedy"}
+        ]
+    }
+
 @app.post("/predict")
 def predict(data: FlightInput):
     try:
