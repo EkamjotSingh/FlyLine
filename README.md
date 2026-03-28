@@ -177,3 +177,78 @@ SUPABASE_KEY=
 5. Claude gives a full plain-English airport plan
 
 ---
+# FlyTime API Documentation
+
+## Predict Endpoint
+```
+POST http://localhost:8000/predict
+```
+
+## Request Body
+```json
+{
+  "flight_number": "DL204",
+  "airport_code": "ATL",
+  "departure_hour": 8,
+  "day_of_week": 0,
+  "month": 6,
+  "has_precheck": false,
+  "num_bags": 1,
+  "group_size": 1,
+  "distance_minutes": 25
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|---|---|---|
+| flight_number | string | Flight number e.g. DL204 |
+| airport_code | string | 3-letter airport code e.g. ATL, JFK, LAX |
+| departure_hour | integer | Hour of departure 0-23 |
+| day_of_week | integer | 0=Monday, 1=Tuesday ... 6=Sunday |
+| month | integer | 1-12 |
+| has_precheck | boolean | true or false |
+| num_bags | integer | Number of bags |
+| group_size | integer | Number of people traveling |
+| distance_minutes | integer | Drive time to airport in minutes |
+
+## Response
+```json
+{
+  "predicted_wait_minutes": 42,
+  "predicted_pax": 520,
+  "recommendation": "Flight DL204 — expect about 42 min at TSA. Leave 87 minutes before your flight. Standard lane — give yourself extra time."
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|---|---|---|
+| predicted_wait_minutes | integer | Predicted TSA wait in minutes |
+| predicted_pax | integer | Predicted passenger volume |
+| recommendation | string | Plain English airport plan |
+
+## Example JS Call
+```javascript
+const response = await fetch("http://localhost:8000/predict", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    flight_number: "DL204",
+    airport_code: "ATL",
+    departure_hour: 8,
+    day_of_week: 0,
+    month: 6,
+    has_precheck: false,
+    num_bags: 1,
+    group_size: 1,
+    distance_minutes: 25
+  })
+});
+
+const data = await response.json();
+console.log(data.predicted_wait_minutes);
+console.log(data.recommendation);
+```
