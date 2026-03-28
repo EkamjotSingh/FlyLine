@@ -176,5 +176,3 @@ SUPABASE_KEY=
 5. Claude gives a full plain-English airport plan
 
 ---
-
-Built at [Hackathon Name] — [Date]
