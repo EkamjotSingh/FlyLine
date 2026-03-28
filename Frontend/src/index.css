@@ -1,8 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
 
 @layer base {
   :root {
@@ -112,4 +112,28 @@
   .glass-card:hover {
     box-shadow: var(--shadow-card-hover);
   }
+}
+
+.maplibregl-map {
+  font: inherit;
+}
+
+.maplibregl-ctrl-bottom-right,
+.maplibregl-ctrl-bottom-left {
+  display: none;
+}
+
+.car-marker {
+  width: 76px;
+  height: 76px;
+  transform: translateY(10px);
+  filter: drop-shadow(0 12px 14px rgb(15 23 42 / 0.2));
+}
+
+.car-marker model-viewer {
+  width: 100%;
+  height: 100%;
+  --progress-bar-color: transparent;
+  --poster-color: transparent;
+  background: transparent;
 }
