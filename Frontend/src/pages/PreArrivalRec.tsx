@@ -66,6 +66,9 @@ const PreArrivalRec = () => {
   const [items, setItems] = useState(checklist);
   const [userCoords, setUserCoords] = useState<string | null>(null);
   const [driveMinutes, setDriveMinutes] = useState(flightData.driveMinutes);
+  const [tsaWait, setTsaWait] = useState(flightData.tsaWaitMinutes);
+  const [loading, setLoading] = useState(false);
+  const [recommendation, setRecommendation] = useState<string | null>(null);
 
   useEffect(() => {
     if (!navigator.geolocation) return;
@@ -74,6 +77,35 @@ const PreArrivalRec = () => {
       () => {},
     );
   }, []);
+
+  const handlePredict = async () => {
+    setLoading(true);
+    try {
+      const now = new Date();
+      console.log(driveMinutes);
+      const res = await fetch("http://localhost:8000/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          flight_number: flightData.flightNumber.replace(/\s+/g, ""),
+          airport_code: flightData.departure,
+          departure_hour: 15,
+          day_of_week: now.getDay(),
+          month: now.getMonth() + 1,
+          has_precheck: false,
+          num_bags: 1,
+          group_size: 1,
+          distance_minutes: driveMinutes,
+        }),
+      });
+      const data = await res.json();
+      setTsaWait(data.predicted_wait_minutes);
+      console.log("tsaWait set to", data.predicted_wait_minutes);
+      setRecommendation(data.recommendation);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggleItem = (id: string) => {
     setItems((prev) =>
@@ -85,7 +117,7 @@ const PreArrivalRec = () => {
   const progress = Math.round((completedCount / items.length) * 100);
 
   const totalTimeNeeded =
-    driveMinutes + flightData.tsaWaitMinutes + flightData.baggageBoardingMinutes + 30;
+    driveMinutes + tsaWait + flightData.baggageBoardingMinutes + 30;
 
   const airportLabel = `${flightData.departure} Airport`;
 
@@ -94,7 +126,7 @@ const PreArrivalRec = () => {
     minutes: number;
     circleClass: string;
   }[] = [
-    { label: "TSA", minutes: flightData.tsaWaitMinutes, circleClass: "bg-primary text-primary-foreground" },
+    { label: "TSA", minutes: tsaWait, circleClass: "bg-primary text-primary-foreground" },
     {
       label: "Baggage Wait",
       minutes: flightData.baggageBoardingMinutes,
@@ -203,11 +235,8 @@ const PreArrivalRec = () => {
                 <div className="flex items-center gap-3 sm:text-right shrink-0">
                   <div>
                     <p className="text-xs text-muted-foreground">Estimated drive</p>
-                    <p className="text-xl font-bold text-foreground tabular-nums">{flightData.driveMinutes} min</p>
+                    <p className="text-xl font-bold text-foreground tabular-nums">{driveMinutes} min</p>
                   </div>
-                  <Badge variant="secondary" className="text-xs shrink-0">
-                    Via I-495 E
-                  </Badge>
                 </div>
               </div>
               {userCoords ? (
@@ -216,7 +245,7 @@ const PreArrivalRec = () => {
                   destination={`${flightData.departure} Airport`}
                   originLabel="Your location"
                   destinationLabel={airportLabel}
-                  onRouteLoaded={({ durationMinutes }) => setDriveMinutes(Math.round(durationMinutes))}
+                  onRouteLoaded={({ durationMinutes }) => setDriveMinutes(Math.round(durationMinutes / 60))}
                 />
               ) : (
                 <div className="rounded-xl bg-muted aspect-[21/9] min-h-[160px] flex items-center justify-center overflow-hidden relative border border-border/40">
@@ -251,6 +280,21 @@ const PreArrivalRec = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              <div className="mb-4">
+                <button
+                  type="button"
+                  onClick={handlePredict}
+                  disabled={loading}
+                  className="w-full rounded-xl bg-accent text-accent-foreground px-4 py-2.5 text-sm font-medium transition hover:opacity-90 disabled:opacity-60"
+                >
+                  {loading ? "Predicting..." : "Get My TSA Prediction"}
+                </button>
+                {recommendation && (
+                  <div className="mt-3 rounded-xl bg-accent/5 border border-accent/20 px-4 py-3">
+                    <p className="text-sm text-foreground">{recommendation}</p>
+                  </div>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-6 sm:gap-8">
                 {timingRows.map((row) => (
                   <div key={row.label} className="flex flex-col items-center text-center gap-3">
