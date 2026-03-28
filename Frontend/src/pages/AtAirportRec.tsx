@@ -18,9 +18,9 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
-type AirportCode = "JFK" | "ATL";
+type AirportCode = "JFK" | "MCO";
 
-const ATL_MAP_EMBED_URL = "https://www.atl.com/maps/";
+const MCO_MAP_EMBED_URL = "https://flymco.com/terminal-maps/map/";
 const JFK_T4_TERMINAL_MAP_PAGE = "https://www.jfkt4.nyc/terminal-map/";
 
 function buildJfkT4SearchUrl(search: string) {
@@ -29,7 +29,7 @@ function buildJfkT4SearchUrl(search: string) {
 
 const AIRPORT_LABEL: Record<AirportCode, string> = {
   JFK: "John F. Kennedy (JFK)",
-  ATL: "Atlanta Hartsfield-Jackson (ATL)",
+  MCO: "Orlando International (MCO)",
 };
 
 const flightInfo = {
@@ -106,44 +106,44 @@ const foodOptions: FoodOption[] = [
     verificationNote: "Verified on official JFK Terminal 4 sources.",
   },
   {
-    id: "atl-cfa",
-    airport: "ATL",
+    id: "mco-cfa",
+    airport: "MCO",
     name: "Chick-fil-A",
     distance: "3 min walk",
-    location: "Concourse A, Center",
+    location: "Airside 4, Gate 100 area",
     rating: 4.6,
     priceRange: "$$",
     tag: "Top Pick",
   },
   {
-    id: "atl-one",
-    airport: "ATL",
-    name: "One Flew South",
-    distance: "5 min walk",
-    location: "Concourse E",
-    rating: 4.7,
-    priceRange: "$$$",
-    tag: "Fine dining",
-  },
-  {
-    id: "atl-varasano",
-    airport: "ATL",
-    name: "Varasano's Pizzeria",
+    id: "mco-bk",
+    airport: "MCO",
+    name: "Burger King",
     distance: "4 min walk",
-    location: "Concourse D",
-    rating: 4.4,
-    priceRange: "$$",
-    tag: "Pizza",
+    location: "Airside 2, main concourse",
+    rating: 3.9,
+    priceRange: "$",
+    tag: "Quick Bite",
   },
   {
-    id: "atl-papis",
-    airport: "ATL",
-    name: "Papi's Cuban & Caribbean Grill",
-    distance: "6 min walk",
-    location: "Concourse B",
+    id: "mco-starbucks",
+    airport: "MCO",
+    name: "Starbucks",
+    distance: "2 min walk",
+    location: "Main Terminal, Level 3",
     rating: 4.2,
     priceRange: "$$",
-    tag: "Quick Bite",
+    tag: "Coffee",
+  },
+  {
+    id: "mco-vino",
+    airport: "MCO",
+    name: "Vino Volo",
+    distance: "5 min walk",
+    location: "Airside 4, near Gate 110",
+    rating: 4.3,
+    priceRange: "$$$",
+    tag: "Wine & bites",
   },
 ];
 
@@ -205,34 +205,34 @@ const comfortSpots: ComfortSpot[] = [
     jfkT4Search: "HelloSky Lounge",
   },
   {
-    id: "atl-sky-e",
-    airport: "ATL",
+    id: "mco-escape",
+    airport: "MCO",
     type: "Lounge",
-    name: "Delta Sky Club",
-    location: "Concourse E",
+    name: "Escape Lounge",
+    location: "Airside 4, near Gate 100",
     distance: "4 min walk",
     icon: Armchair,
-    features: ["Wi-Fi", "Bar", "Showers"],
+    features: ["Wi-Fi", "Food & bar", "Quiet seating"],
   },
   {
-    id: "atl-minute",
-    airport: "ATL",
+    id: "mco-minute",
+    airport: "MCO",
     type: "Rest Area",
     name: "Minute Suites",
-    location: "Concourse B",
+    location: "Airside 2, main concourse",
     distance: "5 min walk",
     icon: Bed,
     features: ["Private suites", "Nap", "Work desk"],
   },
   {
-    id: "atl-westin",
-    airport: "ATL",
+    id: "mco-hyatt",
+    airport: "MCO",
     type: "Hotel",
-    name: "The Westin Atlanta Airport",
-    location: "Connected to terminal",
-    distance: "10 min walk / shuttle",
+    name: "Hyatt Regency Orlando Airport",
+    location: "Connected to Main Terminal",
+    distance: "8 min walk",
     icon: Building2,
-    features: ["Day rooms", "Fitness", "Dining"],
+    features: ["Day rooms", "Pool", "Dining"],
   },
 ];
 
@@ -241,7 +241,7 @@ function resolveEmbedMapUrl(
   selectedFood: FoodOption | undefined,
   selectedComfort: ComfortSpot | undefined,
 ) {
-  if (airport === "ATL") return ATL_MAP_EMBED_URL;
+  if (airport === "MCO") return MCO_MAP_EMBED_URL;
   const search = selectedFood?.jfkT4Search ?? selectedComfort?.jfkT4Search;
   return search ? buildJfkT4SearchUrl(search) : JFK_T4_TERMINAL_MAP_PAGE;
 }
@@ -275,7 +275,7 @@ type WaitReport = {
 };
 
 const AtAirportRec = () => {
-  const [airport, setAirport] = useState<AirportCode>(flightInfo.departure === "ATL" ? "ATL" : "JFK");
+  const [airport, setAirport] = useState<AirportCode>(flightInfo.departure === "MCO" ? "MCO" : "JFK");
   const [selection, setSelection] = useState<Selection>(null);
   const [tsaHours, setTsaHours] = useState("0");
   const [tsaMinutes, setTsaMinutes] = useState("20");
@@ -373,14 +373,14 @@ const AtAirportRec = () => {
               >
                 <TabsList className="grid w-full grid-cols-2 sm:inline-flex sm:w-auto">
                   <TabsTrigger value="JFK" className="text-xs sm:text-sm">JFK</TabsTrigger>
-                  <TabsTrigger value="ATL" className="text-xs sm:text-sm">ATL</TabsTrigger>
+                  <TabsTrigger value="MCO" className="text-xs sm:text-sm">MCO</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
             <p className="text-xs text-muted-foreground">
               {airport === "JFK"
                 ? "JFK uses the official Terminal 4 panel. Tap a food or rest spot to search that exact place in the real T4 map."
-                : `${AIRPORT_LABEL[airport]} - tap a place for details.`}{" "}
+                : `${AIRPORT_LABEL[airport]} — tap a place for details.`}{" "}
               If the map does not load here, use Open full map.
             </p>
           </CardHeader>

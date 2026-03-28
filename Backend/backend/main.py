@@ -3,10 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from supabase import create_client
+from geopy.geocoders import Nominatim
+import httpx
 import pickle
 import numpy as np
 import os
-from datetime import datetime
 
 load_dotenv()
 
@@ -48,7 +49,6 @@ class WaitReport(BaseModel):
     month: int
 
 def get_crowd_adjustment(airport_code: str, hour: int, day_of_week: int, month: int):
-    # pull recent reports for this airport + hour
     result = supabase.table("wait_reports").select("reported_wait").eq(
         "airport_code", airport_code
     ).eq("hour", hour).eq("day_of_week", day_of_week).eq("month", month).execute()
@@ -76,6 +76,99 @@ def get_airports():
         ]
     }
 
+@app.get("/airport-info/{airport_code}")
+def get_airport_info(airport_code: str):
+    airport_data = {
+        "ATL": {
+            "name": "Atlanta Hartsfield-Jackson",
+            "terminals": ["T", "A", "B", "C", "D", "E", "F"],
+            "lounges": [
+                {"name": "Delta Sky Club", "terminal": "B", "cards": ["Delta Amex Reserve", "Delta Amex Platinum"]},
+                {"name": "Delta Sky Club", "terminal": "D", "cards": ["Delta Amex Reserve", "Delta Amex Platinum"]},
+                {"name": "The Club ATL", "terminal": "F", "cards": ["Priority Pass", "Chase Sapphire Reserve", "Amex Platinum"]},
+                {"name": "Escape Lounge", "terminal": "A", "cards": ["Priority Pass", "Chase Sapphire Reserve"]}
+            ],
+            "restaurants": [
+                {"name": "One Flew South", "terminal": "E", "type": "sit-down"},
+                {"name": "Chicken + Beer", "terminal": "T", "type": "casual"},
+                {"name": "Paschal's", "terminal": "T", "type": "casual"},
+                {"name": "Vino Volo", "terminal": "D", "type": "bar"}
+            ]
+        },
+        "JFK": {
+            "name": "New York John F. Kennedy",
+            "terminals": ["1", "2", "4", "5", "7", "8"],
+            "lounges": [
+                {"name": "Centurion Lounge", "terminal": "4", "cards": ["Amex Platinum", "Amex Centurion"]},
+                {"name": "Delta Sky Club", "terminal": "4", "cards": ["Delta Amex Reserve"]},
+                {"name": "American Airlines Admirals Club", "terminal": "8", "cards": ["AA Citi Executive", "Priority Pass"]},
+                {"name": "Chase Sapphire Lounge", "terminal": "4", "cards": ["Chase Sapphire Reserve"]}
+            ],
+            "restaurants": [
+                {"name": "Deep Blue Sushi", "terminal": "5", "type": "sit-down"},
+                {"name": "Shake Shack", "terminal": "4", "type": "casual"},
+                {"name": "Fig & Olive", "terminal": "8", "type": "sit-down"},
+                {"name": "Balducci's", "terminal": "4", "type": "grab-and-go"}
+            ]
+        }
+    }
+
+    code = airport_code.upper()
+    if code not in airport_data:
+        return {"error": f"Airport {code} not supported in demo"}
+
+    return airport_data[code]
+
+@app.get("/api/maps/route")
+async def get_route(origin: str, destination: str):
+    geolocator = Nominatim(user_agent="flytime")
+
+    origin_loc = geolocator.geocode(origin)
+    dest_loc = geolocator.geocode(destination)
+
+    if not origin_loc or not dest_loc:
+        return {"error": "Could not geocode locations"}
+
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            f"http://router.project-osrm.org/route/v1/driving/"
+            f"{origin_loc.longitude},{origin_loc.latitude};"
+            f"{dest_loc.longitude},{dest_loc.latitude}"
+            f"?overview=full&geometries=geojson&steps=true"
+        )
+
+    data = response.json()
+    route = data["routes"][0]
+    steps = route["legs"][0]["steps"]
+
+    return {
+        "origin": {
+            "query": origin,
+            "label": origin,
+            "latitude": origin_loc.latitude,
+            "longitude": origin_loc.longitude
+        },
+        "destination": {
+            "query": destination,
+            "label": destination,
+            "latitude": dest_loc.latitude,
+            "longitude": dest_loc.longitude
+        },
+        "route": {
+            "distanceMeters": route["distance"],
+            "durationSeconds": route["duration"],
+            "geometry": route["geometry"],
+            "steps": [
+                {
+                    "name": s.get("name", ""),
+                    "instruction": s.get("maneuver", {}).get("type", ""),
+                    "distanceMeters": s.get("distance", 0),
+                    "durationSeconds": s.get("duration", 0)
+                } for s in steps
+            ]
+        }
+    }
+
 @app.post("/predict")
 def predict(data: FlightInput):
     try:
@@ -91,18 +184,17 @@ def predict(data: FlightInput):
     if data.has_precheck:
         ml_wait = round(ml_wait * 0.4)
 
-    # blend with crowdsourced data if available
     crowd_wait, report_count = get_crowd_adjustment(
         data.airport_code, data.departure_hour, data.day_of_week, data.month
     )
 
     if crowd_wait and report_count >= 1:
         if report_count >= 10:
-            weight = 0.9  # mostly crowd
+            weight = 0.9
         elif report_count >= 5:
-            weight = 0.6  # balanced
+            weight = 0.6
         else:
-            weight = 0.2  # mostly ML
+            weight = 0.2
         predicted_wait = round((weight * crowd_wait) + ((1 - weight) * ml_wait))
     else:
         predicted_wait = ml_wait
@@ -111,7 +203,6 @@ def predict(data: FlightInput):
 
     recommendation = f"Flight {data.flight_number} — expect about {predicted_wait} min at TSA. Leave {leave_by} minutes before your flight. {'Use the PreCheck lane, it will be much faster.' if data.has_precheck else 'Standard lane — give yourself extra time.'}"
 
-    # log prediction to supabase
     supabase.table("predictions").insert({
         "flight_number": data.flight_number,
         "airport_code": data.airport_code,
